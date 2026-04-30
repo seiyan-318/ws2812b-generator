@@ -4,69 +4,367 @@
 <meta charset="UTF-8">
 <title>WS2812B マトリクスコードジェネレーター</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 20px; }
+  body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f5f5f5; }
+  h2 { color: #333; }
+  
+  .control-panel {
+    background-color: white; padding: 20px; margin-bottom: 20px; 
+    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 900px; margin-left: auto; margin-right: auto;
+  }
+  
+  .control-row {
+    display: flex; gap: 15px; justify-content: center; align-items: center;
+    flex-wrap: wrap; margin-bottom: 15px;
+  }
+  
+  .control-group {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+  }
+  
+  .control-group label { font-weight: bold; font-size: 13px; }
+  .control-group input[type="number"] { width: 70px; padding: 5px; }
+  
+  button {
+    padding: 8px 16px; background-color: #4CAF50; color: white; 
+    border: none; border-radius: 4px; cursor: pointer; font-size: 14px;
+  }
+  button:hover { background-color: #45a049; }
+  
+  .color-palette {
+    display: flex; gap: 10px; flex-wrap: wrap; 
+    align-items: center; justify-content: center;
+    padding: 15px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;
+    margin-bottom: 15px;
+  }
+  
+  .color-option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border: 2px solid transparent;
+    border-radius: 6px; cursor: pointer; transition: all 0.2s;
+  }
+  
+  .color-option:hover { background-color: #f0f0f0; }
+  
+  .color-option input[type="radio"] { cursor: pointer; }
+  
+  .color-preview {
+    width: 30px; height: 30px; border-radius: 4px; 
+    border: 1px solid #999; flex-shrink: 0;
+  }
+  
+  .color-option.active {
+    border-color: #333; background-color: #e8f5e9;
+  }
+  
+  .custom-color-section {
+    background-color: #f9f9f9; padding: 12px 15px;
+    border-radius: 6px; margin-top: 10px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  
+  .custom-color-label { font-weight: bold; font-size: 13px; }
+  
+  .color-picker-input {
+    width: 50px; height: 40px; cursor: pointer;
+    border: 2px solid #999; border-radius: 4px;
+  }
+  
+  .grid-container {
+    background-color: white; padding: 20px; margin-bottom: 20px;
+    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: inline-block;
+  }
+  
   .grid {
     display: grid;
-    grid-template-columns: repeat(5, 50px);
     gap: 5px;
     justify-content: center;
     margin-bottom: 20px;
   }
+  
   .led {
     width: 50px; height: 50px;
     background-color: #ddd;
     border-radius: 50%;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; color: #666;
+    font-size: 11px; color: #333; font-weight: bold;
+    border: 2px solid #999;
+    transition: all 0.2s;
+    box-shadow: inset 0 0 3px rgba(0,0,0,0.2);
   }
-  .led.active { background-color: #ff4444; color: white; }
-  textarea { width: 80%; height: 150px; font-family: monospace; padding: 10px; }
+  
+  .led:hover { transform: scale(1.05); }
+  
+  .output-panel {
+    background-color: white; padding: 20px; 
+    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 900px; margin-left: auto; margin-right: auto;
+  }
+  
+  textarea { width: 100%; height: 200px; font-family: 'Courier New', monospace; 
+    padding: 10px; border: 1px solid #ddd; border-radius: 4px; 
+    box-sizing: border-box; font-size: 13px; }
+    
+  .copy-btn { margin-top: 10px; }
+  
+  .button-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  
+  .clear-btn { background-color: #f44336; }
+  .clear-btn:hover { background-color: #d32f2f; }
 </style>
 </head>
 <body>
 
-  <h2>LEDコードジェネレーター (5x5)</h2>
+  <h2>WS2812B LEDコードジェネレーター</h2>
   
-  <div class="grid" id="ledGrid"></div>
+  <div class="control-panel">
+    <h3>グリッド設定</h3>
+    <div class="control-row">
+      <div class="control-group">
+        <label for="width">幅 (Width)</label>
+        <input type="number" id="width" min="1" max="20" value="5">
+      </div>
+      <div class="control-group">
+        <label for="height">高さ (Height)</label>
+        <input type="number" id="height" min="1" max="20" value="5">
+      </div>
+      <div class="control-group">
+        <label for="startId">開始ID</label>
+        <input type="number" id="startId" min="0" value="0">
+      </div>
+      <button onclick="regenerateGrid()">グリッド再生成</button>
+    </div>
 
-  <textarea id="outputCode" readonly></textarea>
+    <h3>色パレット</h3>
+    <div class="color-palette" id="colorPalette"></div>
+    
+    <div class="custom-color-section">
+      <span class="custom-color-label">カスタムカラー:</span>
+      <input type="color" id="customColorPicker" class="color-picker-input" value="#ff0000">
+      <button onclick="addCustomColor()">+ 追加</button>
+    </div>
+  </div>
+
+  <div class="grid-container">
+    <h3>LEDマトリクス</h3>
+    <div class="grid" id="ledGrid"></div>
+  </div>
+
+  <div class="output-panel">
+    <h3>出力コード</h3>
+    <textarea id="outputCode" readonly></textarea>
+    <div class="button-row">
+      <button class="copy-btn" onclick="copyToClipboard()">コピー</button>
+      <button class="clear-btn" onclick="clearAllLeds()">すべてクリア</button>
+    </div>
+  </div>
 
 <script>
-  const gridSize = 25;
   const gridElement = document.getElementById('ledGrid');
   const outputElement = document.getElementById('outputCode');
-  let selectedLeds = new Set();
+  const widthInput = document.getElementById('width');
+  const heightInput = document.getElementById('height');
+  const startIdInput = document.getElementById('startId');
+  const colorPaletteElement = document.getElementById('colorPalette');
+  const customColorPicker = document.getElementById('customColorPicker');
+  
+  // 複数の色を定義
+  let colors = [
+    { name: '赤', hex: '#ff0000' },
+    { name: '緑', hex: '#00ff00' },
+    { name: '青', hex: '#0000ff' },
+    { name: '黄', hex: '#ffff00' },
+    { name: '紫', hex: '#ff00ff' },
+  ];
+  
+  let ledColorMap = {}; // LEDインデックス -> {hex, rgb}
+  let ledIdMap = {}; // LEDインデックス -> 実際のID
+  let activeColorIndex = 0; // アクティブな色のインデックス
 
-  // 1. LEDボタンを25個生成する
-  for (let i = 0; i < gridSize; i++) {
-    const led = document.createElement('div');
-    led.className = 'led';
-    led.innerText = i; // 番号を表示
+  // 色をRGBに変換
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 128, g: 128, b: 128 };
+  }
+  
+  // Hex値から色名を生成
+  function generateColorName(hex) {
+    const colorNames = {
+      '#ff0000': '赤', '#00ff00': '緑', '#0000ff': '青',
+      '#ffff00': '黄', '#ff00ff': '紫', '#ffffff': '白', '#000000': '黒'
+    };
+    return colorNames[hex.toLowerCase()] || hex;
+  }
+  
+  // カスタムカラーを追加
+  function addCustomColor() {
+    const customHex = customColorPicker.value;
+    const customName = generateColorName(customHex);
     
-    // 2. クリックされたときの処理
-    led.addEventListener('click', () => {
-      led.classList.toggle('active');
-      if (selectedLeds.has(i)) {
-        selectedLeds.delete(i);
-      } else {
-        selectedLeds.add(i);
-      }
-      generateCode();
-    });
-    gridElement.appendChild(led);
+    // 重複チェック
+    const isDuplicate = colors.some(c => c.hex.toLowerCase() === customHex.toLowerCase());
+    if (isDuplicate) {
+      alert('その色はすでに追加されています');
+      return;
+    }
+    
+    // 色を追加
+    colors.push({ name: customName, hex: customHex });
+    createColorPalette();
+    
+    // 追加した色をアクティブにする
+    setActiveColor(colors.length - 1);
   }
 
-  // 3. コードを生成してテキストエリアに出力する関数
-  function generateCode() {
-    // 選択された番号を小さい順に並び替え
-    const sorted = Array.from(selectedLeds).sort((a, b) => a - b);
-    let code = "// FastLED用 生成コード\n";
-    sorted.forEach(index => {
-      code += `leds[${index}] = CRGB::Red;\n`;
+  // 色パレットを作成
+  function createColorPalette() {
+    colorPaletteElement.innerHTML = '';
+    colors.forEach((color, index) => {
+      const option = document.createElement('label');
+      option.className = 'color-option' + (index === 0 ? ' active' : '');
+      
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'color';
+      radio.value = index;
+      radio.checked = (index === 0);
+      radio.onchange = () => setActiveColor(index);
+      
+      const preview = document.createElement('div');
+      preview.className = 'color-preview';
+      preview.style.backgroundColor = color.hex;
+      
+      const label = document.createElement('span');
+      label.textContent = color.name;
+      
+      option.appendChild(radio);
+      option.appendChild(preview);
+      option.appendChild(label);
+      colorPaletteElement.appendChild(option);
     });
+  }
+
+  // アクティブな色を設定
+  function setActiveColor(index) {
+    activeColorIndex = index;
+    document.querySelectorAll('.color-option').forEach((el, i) => {
+      el.classList.toggle('active', i === index);
+    });
+  }
+
+  // グリッドを再生成
+  function regenerateGrid() {
+    const width = parseInt(widthInput.value) || 5;
+    const height = parseInt(heightInput.value) || 5;
+    const startId = parseInt(startIdInput.value) || 0;
+
+    // バリデーション
+    if (width < 1 || height < 1 || width > 20 || height > 20) {
+      alert('幅と高さは1～20の範囲で指定してください');
+      return;
+    }
+
+    // グリッドをクリア
+    gridElement.innerHTML = '';
+    ledColorMap = {};
+    ledIdMap = {};
+
+    // グリッドのカラム設定
+    gridElement.style.gridTemplateColumns = `repeat(${width}, 50px)`;
+
+    // LEDボタンを生成
+    const totalLeds = width * height;
+    for (let i = 0; i < totalLeds; i++) {
+      const led = document.createElement('div');
+      led.className = 'led';
+      const ledId = startId + i;
+      led.innerText = ledId; // IDを表示
+      led.dataset.index = i;
+      ledIdMap[i] = ledId;
+
+      led.addEventListener('click', () => {
+        const activeColor = colors[activeColorIndex];
+        if (ledColorMap[i]) {
+          delete ledColorMap[i];
+          led.style.backgroundColor = '#ddd';
+          led.style.color = '#333';
+        } else {
+          ledColorMap[i] = { hex: activeColor.hex, rgb: hexToRgb(activeColor.hex) };
+          led.style.backgroundColor = activeColor.hex;
+          led.style.color = isLightColor(activeColor.hex) ? '#000' : '#fff';
+        }
+        generateCode();
+      });
+
+      gridElement.appendChild(led);
+    }
+
+    generateCode();
+  }
+
+  // 明るい色かどうか判定
+  function isLightColor(hex) {
+    const rgb = hexToRgb(hex);
+    const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+    return brightness > 128;
+  }
+
+  // コードを生成
+  function generateCode() {
+    const colorGroups = {};
+    
+    // 色ごとにLEDをグループ化
+    Object.keys(ledColorMap).forEach(index => {
+      const colorKey = ledColorMap[index].hex;
+      if (!colorGroups[colorKey]) {
+        colorGroups[colorKey] = [];
+      }
+      colorGroups[colorKey].push(parseInt(index));
+    });
+
+    let code = "// FastLED用 生成コード\n\n";
+    
+    Object.keys(colorGroups).forEach(colorKey => {
+      const ledIndices = colorGroups[colorKey].sort((a, b) => a - b);
+      const rgb = ledColorMap[ledIndices[0]].rgb;
+      
+      code += `// RGB(${rgb.r}, ${rgb.g}, ${rgb.b})\n`;
+      ledIndices.forEach(index => {
+        const ledId = ledIdMap[index];
+        code += `leds[${ledId}] = CRGB(${rgb.r}, ${rgb.g}, ${rgb.b});\n`;
+      });
+      code += "\n";
+    });
+    
     outputElement.value = code;
   }
+
+  // すべてクリア
+  function clearAllLeds() {
+    ledColorMap = {};
+    document.querySelectorAll('.led').forEach(led => {
+      led.style.backgroundColor = '#ddd';
+      led.style.color = '#333';
+    });
+    generateCode();
+  }
+
+  // クリップボードにコピー
+  function copyToClipboard() {
+    outputElement.select();
+    document.execCommand('copy');
+    alert('コピーしました！');
+  }
+
+  // 初期化
+  createColorPalette();
+  regenerateGrid();
 </script>
 
 </body>
