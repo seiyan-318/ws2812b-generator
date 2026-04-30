@@ -1,163 +1,367 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>WS2812B マトリクスコードジェネレーター</title>
+<title>NeoPixel Studio</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f5f5f5; }
-  h2 { color: #333; }
-  
+  :root {
+    --page-bg: #f5f5f7;
+    --panel-bg: rgba(255, 255, 255, 0.82);
+    --panel-border: rgba(0, 0, 0, 0.08);
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+    --danger: #ff3b30;
+    --led-off: #ececf0;
+    --shadow: 0 18px 55px rgba(0, 0, 0, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    text-align: center;
+    padding: 44px 20px;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(0, 113, 227, 0.14), transparent 34%),
+      radial-gradient(circle at 85% 12%, rgba(52, 199, 89, 0.12), transparent 28%),
+      linear-gradient(180deg, #fbfbfd 0%, var(--page-bg) 55%, #eeeeF3 100%);
+  }
+
+  h2 {
+    margin: 0 0 26px;
+    color: var(--text);
+    font-size: clamp(30px, 5vw, 52px);
+    line-height: 1.04;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  h3 {
+    margin: 0 0 16px;
+    font-size: 17px;
+    font-weight: 650;
+    color: var(--text);
+  }
+
   .control-panel {
-    background-color: white; padding: 20px; margin-bottom: 20px; 
-    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    max-width: 900px; margin-left: auto; margin-right: auto;
+    background: var(--panel-bg);
+    padding: 24px;
+    margin: 0 auto 22px;
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    max-width: 980px;
+    backdrop-filter: blur(22px);
   }
-  
+
   .control-row {
-    display: flex; gap: 15px; justify-content: center; align-items: center;
-    flex-wrap: wrap; margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+    gap: 14px;
+    align-items: end;
+    margin-bottom: 20px;
   }
-  
+
   .control-group {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    text-align: left;
   }
-  
-  .control-group label { font-weight: bold; font-size: 13px; }
-  .control-group input[type="number"] { width: 70px; padding: 5px; }
-  
+
+  .control-group label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .control-group input[type="number"],
+  .control-group select {
+    width: 100%;
+    min-height: 40px;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    padding: 8px 11px;
+    font: inherit;
+    outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  }
+
+  .control-group input[type="number"]:focus,
+  .control-group select:focus {
+    background: #fff;
+    border-color: rgba(0, 113, 227, 0.8);
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14);
+  }
+
   button {
-    padding: 8px 16px; background-color: #4CAF50; color: white; 
-    border: none; border-radius: 4px; cursor: pointer; font-size: 14px;
+    min-height: 40px;
+    padding: 9px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 650;
+    transition: transform 0.16s, background 0.16s, box-shadow 0.16s;
+    box-shadow: 0 8px 18px rgba(0, 113, 227, 0.24);
   }
-  button:hover { background-color: #45a049; }
-  
+  button:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+
   .color-palette {
-    display: flex; gap: 10px; flex-wrap: wrap; 
-    align-items: center; justify-content: center;
-    padding: 15px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;
-    margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.07);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    margin-bottom: 16px;
   }
-  
+
   .color-option {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border: 2px solid transparent;
-    border-radius: 6px; cursor: pointer; transition: all 0.2s;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 11px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+    background: rgba(255, 255, 255, 0.56);
+    color: var(--text);
+    font-weight: 600;
   }
-  
-  .color-option:hover { background-color: #f0f0f0; }
-  
-  .color-option input[type="radio"] { cursor: pointer; }
-  
+
+  .color-option:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+  }
+
+  .color-option input[type="radio"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
   .color-preview {
-    width: 30px; height: 30px; border-radius: 4px; 
-    border: 1px solid #999; flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
   }
-  
+
   .color-option.active {
-    border-color: #333; background-color: #e8f5e9;
+    border-color: rgba(0, 113, 227, 0.55);
+    background: rgba(0, 113, 227, 0.08);
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.10);
   }
-  
+
   .custom-color-section {
-    background-color: #f9f9f9; padding: 12px 15px;
-    border-radius: 6px; margin-top: 10px;
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: rgba(245, 245, 247, 0.72);
+    padding: 14px 16px;
+    border-radius: 14px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
-  
-  .custom-color-label { font-weight: bold; font-size: 13px; }
-  
+
+  .custom-color-label { font-weight: 650; font-size: 13px; color: var(--muted); }
+
   .color-picker-input {
-    width: 50px; height: 40px; cursor: pointer;
-    border: 2px solid #999; border-radius: 4px;
+    width: 52px;
+    height: 38px;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    background: white;
+    padding: 3px;
   }
-  
+
   .grid-container {
-    background-color: white; padding: 20px; margin-bottom: 20px;
-    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: rgba(255, 255, 255, 0.78);
+    padding: 22px;
+    margin-bottom: 22px;
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
     display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    backdrop-filter: blur(22px);
   }
-  
+
   .grid {
     display: grid;
-    gap: 5px;
+    gap: 8px;
     justify-content: center;
     margin-bottom: 20px;
   }
-  
+
   .led {
-    width: 50px; height: 50px;
-    background-color: #ddd;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(145deg, #fbfbfd, var(--led-off));
     border-radius: 50%;
     cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; color: #333; font-weight: bold;
-    border: 2px solid #999;
-    transition: all 0.2s;
-    box-shadow: inset 0 0 3px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #515154;
+    font-weight: 700;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+    box-shadow:
+      inset 0 1px 2px rgba(255, 255, 255, 0.95),
+      inset 0 -4px 8px rgba(0, 0, 0, 0.08),
+      0 7px 16px rgba(0, 0, 0, 0.10);
+    user-select: none;
   }
-  
-  .led:hover { transform: scale(1.05); }
-  
+
+  .led:hover {
+    transform: scale(1.06);
+    border-color: rgba(0, 113, 227, 0.35);
+    box-shadow:
+      inset 0 1px 2px rgba(255, 255, 255, 0.95),
+      inset 0 -4px 8px rgba(0, 0, 0, 0.08),
+      0 12px 24px rgba(0, 0, 0, 0.15);
+  }
+
   .output-panel {
-    background-color: white; padding: 20px; 
-    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    max-width: 900px; margin-left: auto; margin-right: auto;
+    background: var(--panel-bg);
+    padding: 24px;
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+    backdrop-filter: blur(22px);
   }
-  
-  textarea { width: 100%; height: 200px; font-family: 'Courier New', monospace; 
-    padding: 10px; border: 1px solid #ddd; border-radius: 4px; 
-    box-sizing: border-box; font-size: 13px; }
-    
+
+  textarea {
+    width: 100%;
+    height: 220px;
+    font-family: "SF Mono", "Cascadia Code", "Courier New", monospace;
+    padding: 15px;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 14px;
+    box-sizing: border-box;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #f5f5f7;
+    background: #1d1d1f;
+    resize: vertical;
+  }
+
   .copy-btn { margin-top: 10px; }
-  
-  .button-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  
-  .clear-btn { background-color: #f44336; }
-  .clear-btn:hover { background-color: #d32f2f; }
+  .button-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .clear-btn {
+    background: var(--danger);
+    box-shadow: 0 8px 18px rgba(255, 59, 48, 0.20);
+  }
+  .clear-btn:hover { background: #ff453a; }
+
+  .reverse-btn {
+    background: #2c2c2e;
+    box-shadow: 0 8px 18px rgba(44, 44, 46, 0.20);
+  }
+  .reverse-btn:hover { background: #3a3a3c; }
+
+  @media (max-width: 640px) {
+    body { padding: 28px 12px; }
+    .control-panel,
+    .grid-container,
+    .output-panel { border-radius: 16px; padding: 16px; }
+    .control-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .led { width: 42px; height: 42px; font-size: 10px; }
+    .grid { gap: 6px; }
+  }
 </style>
 </head>
 <body>
 
-  <h2>WS2812B LEDコードジェネレーター</h2>
-  
+  <h2>NeoPixel Studio</h2>
+
   <div class="control-panel">
-    <h3>グリッド設定</h3>
+    <h3>Matrix</h3>
     <div class="control-row">
       <div class="control-group">
-        <label for="width">幅 (Width)</label>
+        <label for="width">Width</label>
         <input type="number" id="width" min="1" max="20" value="5">
       </div>
       <div class="control-group">
-        <label for="height">高さ (Height)</label>
+        <label for="height">Height</label>
         <input type="number" id="height" min="1" max="20" value="5">
       </div>
       <div class="control-group">
-        <label for="startId">開始ID</label>
+        <label for="startId">Start ID</label>
         <input type="number" id="startId" min="0" value="0">
       </div>
-      <button onclick="regenerateGrid()">グリッド再生成</button>
+      <div class="control-group">
+        <label for="brightness">Brightness</label>
+        <input type="number" id="brightness" min="0" max="255" value="255" oninput="generateCode()">
+      </div>
+      <div class="control-group">
+        <label for="idStartCorner">ID Origin</label>
+        <select id="idStartCorner" onchange="updateIds()">
+          <option value="bottom-left">Bottom Left</option>
+          <option value="bottom-right">Bottom Right</option>
+          <option value="top-left" selected>Top Left</option>
+          <option value="top-right">Top Right</option>
+        </select>
+      </div>
+      <button onclick="regenerateGrid()">Refresh Matrix</button>
     </div>
 
-    <h3>色パレット</h3>
+    <h3>Palette</h3>
     <div class="color-palette" id="colorPalette"></div>
-    
+
     <div class="custom-color-section">
-      <span class="custom-color-label">カスタムカラー:</span>
+      <span class="custom-color-label">Custom Color</span>
       <input type="color" id="customColorPicker" class="color-picker-input" value="#ff0000">
-      <button onclick="addCustomColor()">+ 追加</button>
+      <button onclick="addCustomColor()">Add</button>
     </div>
   </div>
 
   <div class="grid-container">
-    <h3>LEDマトリクス</h3>
+    <h3>LED Matrix</h3>
     <div class="grid" id="ledGrid"></div>
   </div>
 
   <div class="output-panel">
-    <h3>出力コード</h3>
+    <h3>Generated Code</h3>
     <textarea id="outputCode" readonly></textarea>
     <div class="button-row">
-      <button class="copy-btn" onclick="copyToClipboard()">コピー</button>
-      <button class="clear-btn" onclick="clearAllLeds()">すべてクリア</button>
+      <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
+      <button class="clear-btn" onclick="clearAllLeds()">Clear All</button>
+      <button class="reverse-btn" onclick="reverseIds()">Reverse IDs</button>
     </div>
   </div>
 
@@ -167,23 +371,27 @@
   const widthInput = document.getElementById('width');
   const heightInput = document.getElementById('height');
   const startIdInput = document.getElementById('startId');
+  const brightnessInput = document.getElementById('brightness');
+  const idStartCornerInput = document.getElementById('idStartCorner');
   const colorPaletteElement = document.getElementById('colorPalette');
   const customColorPicker = document.getElementById('customColorPicker');
-  
-  // 複数の色を定義
-  let colors = [
-    { name: '赤', hex: '#ff0000' },
-    { name: '緑', hex: '#00ff00' },
-    { name: '青', hex: '#0000ff' },
-    { name: '黄', hex: '#ffff00' },
-    { name: '紫', hex: '#ff00ff' },
-  ];
-  
-  let ledColorMap = {}; // LEDインデックス -> {hex, rgb}
-  let ledIdMap = {}; // LEDインデックス -> 実際のID
-  let activeColorIndex = 0; // アクティブな色のインデックス
 
-  // 色をRGBに変換
+  let colors = [
+    { name: 'Red', hex: '#ff0000' },
+    { name: 'Green', hex: '#00ff00' },
+    { name: 'Blue', hex: '#0000ff' },
+    { name: 'Yellow', hex: '#ffff00' },
+    { name: 'Violet', hex: '#ff00ff' },
+  ];
+
+  let ledColorMap = {};
+  let ledIdMap = {};
+  let activeColorIndex = 0;
+  let isDragging = false;
+  let gridWidth = 5;
+  let gridHeight = 5;
+  let reverseIdOrder = false;
+
   function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -192,57 +400,55 @@
       b: parseInt(result[3], 16)
     } : { r: 128, g: 128, b: 128 };
   }
-  
-  // Hex値から色名を生成
+
   function generateColorName(hex) {
     const colorNames = {
-      '#ff0000': '赤', '#00ff00': '緑', '#0000ff': '青',
-      '#ffff00': '黄', '#ff00ff': '紫', '#ffffff': '白', '#000000': '黒'
+      '#ff0000': 'Red',
+      '#00ff00': 'Green',
+      '#0000ff': 'Blue',
+      '#ffff00': 'Yellow',
+      '#ff00ff': 'Violet',
+      '#ffffff': 'White',
+      '#000000': 'Black'
     };
     return colorNames[hex.toLowerCase()] || hex;
   }
-  
-  // カスタムカラーを追加
+
   function addCustomColor() {
     const customHex = customColorPicker.value;
     const customName = generateColorName(customHex);
-    
-    // 重複チェック
     const isDuplicate = colors.some(c => c.hex.toLowerCase() === customHex.toLowerCase());
+
     if (isDuplicate) {
-      alert('その色はすでに追加されています');
+      alert('This color is already in the palette.');
       return;
     }
-    
-    // 色を追加
+
     colors.push({ name: customName, hex: customHex });
     createColorPalette();
-    
-    // 追加した色をアクティブにする
     setActiveColor(colors.length - 1);
   }
 
-  // 色パレットを作成
   function createColorPalette() {
     colorPaletteElement.innerHTML = '';
     colors.forEach((color, index) => {
       const option = document.createElement('label');
-      option.className = 'color-option' + (index === 0 ? ' active' : '');
-      
+      option.className = 'color-option' + (index === activeColorIndex ? ' active' : '');
+
       const radio = document.createElement('input');
       radio.type = 'radio';
       radio.name = 'color';
       radio.value = index;
-      radio.checked = (index === 0);
+      radio.checked = (index === activeColorIndex);
       radio.onchange = () => setActiveColor(index);
-      
+
       const preview = document.createElement('div');
       preview.className = 'color-preview';
       preview.style.backgroundColor = color.hex;
-      
+
       const label = document.createElement('span');
       label.textContent = color.name;
-      
+
       option.appendChild(radio);
       option.appendChild(preview);
       option.appendChild(label);
@@ -250,90 +456,145 @@
     });
   }
 
-  // アクティブな色を設定
   function setActiveColor(index) {
     activeColorIndex = index;
     document.querySelectorAll('.color-option').forEach((el, i) => {
       el.classList.toggle('active', i === index);
+      const radio = el.querySelector('input[type="radio"]');
+      radio.checked = i === index;
     });
   }
 
-  // グリッドを再生成
-  function regenerateGrid() {
-    const width = parseInt(widthInput.value) || 5;
-    const height = parseInt(heightInput.value) || 5;
-    const startId = parseInt(startIdInput.value) || 0;
+  function getSequenceIndex(index) {
+    const row = Math.floor(index / gridWidth);
+    const col = index % gridWidth;
 
-    // バリデーション
+    switch (idStartCornerInput.value) {
+      case 'bottom-left':
+        return (gridHeight - 1 - row) * gridWidth + col;
+      case 'bottom-right':
+        return (gridHeight - 1 - row) * gridWidth + (gridWidth - 1 - col);
+      case 'top-right':
+        return row * gridWidth + (gridWidth - 1 - col);
+      case 'top-left':
+      default:
+        return row * gridWidth + col;
+    }
+  }
+
+  function calculateLedId(index) {
+    const totalLeds = gridWidth * gridHeight;
+    const startId = parseInt(startIdInput.value, 10) || 0;
+    const sequenceIndex = getSequenceIndex(index);
+    return startId + (reverseIdOrder ? totalLeds - 1 - sequenceIndex : sequenceIndex);
+  }
+
+  function updateIds() {
+    const totalLeds = gridWidth * gridHeight;
+
+    for (let i = 0; i < totalLeds; i++) {
+      ledIdMap[i] = calculateLedId(i);
+    }
+
+    document.querySelectorAll('.led').forEach((led, i) => {
+      led.innerText = ledIdMap[i];
+    });
+
+    generateCode();
+  }
+
+  function regenerateGrid() {
+    const width = parseInt(widthInput.value, 10) || 5;
+    const height = parseInt(heightInput.value, 10) || 5;
+
     if (width < 1 || height < 1 || width > 20 || height > 20) {
-      alert('幅と高さは1～20の範囲で指定してください');
+      alert('Width and height must be between 1 and 20.');
       return;
     }
 
-    // グリッドをクリア
+    gridWidth = width;
+    gridHeight = height;
+    reverseIdOrder = false;
     gridElement.innerHTML = '';
     ledColorMap = {};
     ledIdMap = {};
-
-    // グリッドのカラム設定
     gridElement.style.gridTemplateColumns = `repeat(${width}, 50px)`;
 
-    // LEDボタンを生成
     const totalLeds = width * height;
     for (let i = 0; i < totalLeds; i++) {
       const led = document.createElement('div');
       led.className = 'led';
-      const ledId = startId + i;
-      led.innerText = ledId; // IDを表示
       led.dataset.index = i;
-      ledIdMap[i] = ledId;
 
-      led.addEventListener('click', () => {
-        const activeColor = colors[activeColorIndex];
-        if (ledColorMap[i]) {
-          delete ledColorMap[i];
-          led.style.backgroundColor = '#ddd';
-          led.style.color = '#333';
-        } else {
-          ledColorMap[i] = { hex: activeColor.hex, rgb: hexToRgb(activeColor.hex) };
-          led.style.backgroundColor = activeColor.hex;
-          led.style.color = isLightColor(activeColor.hex) ? '#000' : '#fff';
+      led.addEventListener('mousedown', () => {
+        isDragging = true;
+        toggleLed(led, i);
+      });
+
+      led.addEventListener('mouseover', () => {
+        if (isDragging) {
+          toggleLed(led, i);
         }
-        generateCode();
       });
 
       gridElement.appendChild(led);
     }
 
+    updateIds();
+  }
+
+  function toggleLed(ledElement, index) {
+    const activeColor = colors[activeColorIndex];
+    if (ledColorMap[index]) {
+      delete ledColorMap[index];
+      ledElement.style.background = '';
+      ledElement.style.color = '#333';
+    } else {
+      ledColorMap[index] = { hex: activeColor.hex, rgb: hexToRgb(activeColor.hex) };
+      ledElement.style.background = activeColor.hex;
+      ledElement.style.color = isLightColor(activeColor.hex) ? '#000' : '#fff';
+    }
     generateCode();
   }
 
-  // 明るい色かどうか判定
+  function reverseIds() {
+    reverseIdOrder = !reverseIdOrder;
+    updateIds();
+  }
+
   function isLightColor(hex) {
     const rgb = hexToRgb(hex);
     const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
     return brightness > 128;
   }
 
-  // コードを生成
+  function getBrightness() {
+    const brightness = parseInt(brightnessInput.value, 10);
+    if (Number.isNaN(brightness)) {
+      return 255;
+    }
+    return Math.max(0, Math.min(255, brightness));
+  }
+
   function generateCode() {
     const colorGroups = {};
-    
-    // 色ごとにLEDをグループ化
+
     Object.keys(ledColorMap).forEach(index => {
       const colorKey = ledColorMap[index].hex;
       if (!colorGroups[colorKey]) {
         colorGroups[colorKey] = [];
       }
-      colorGroups[colorKey].push(parseInt(index));
+      colorGroups[colorKey].push(parseInt(index, 10));
     });
 
-    let code = "// FastLED用 生成コード\n\n";
-    
+    const brightness = getBrightness();
+    let code = "// FastLED generated code\n";
+    code += `FastLED.setBrightness(${brightness});\n\n`;
+
     Object.keys(colorGroups).forEach(colorKey => {
-      const ledIndices = colorGroups[colorKey].sort((a, b) => a - b);
+      const ledIndices = colorGroups[colorKey].sort((a, b) => ledIdMap[a] - ledIdMap[b]);
       const rgb = ledColorMap[ledIndices[0]].rgb;
-      
+
       code += `// RGB(${rgb.r}, ${rgb.g}, ${rgb.b})\n`;
       ledIndices.forEach(index => {
         const ledId = ledIdMap[index];
@@ -341,28 +602,29 @@
       });
       code += "\n";
     });
-    
+
     outputElement.value = code;
   }
 
-  // すべてクリア
   function clearAllLeds() {
     ledColorMap = {};
     document.querySelectorAll('.led').forEach(led => {
-      led.style.backgroundColor = '#ddd';
+      led.style.background = '';
       led.style.color = '#333';
     });
     generateCode();
   }
 
-  // クリップボードにコピー
   function copyToClipboard() {
     outputElement.select();
     document.execCommand('copy');
-    alert('コピーしました！');
+    alert('Copied.');
   }
 
-  // 初期化
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
   createColorPalette();
   regenerateGrid();
 </script>
