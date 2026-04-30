@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>WS2812B マトリクスコードジェネレーター</title>
+<style>
+  body { font-family: sans-serif; text-align: center; padding: 20px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 50px);
+    gap: 5px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .led {
+    width: 50px; height: 50px;
+    background-color: #ddd;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #666;
+  }
+  .led.active { background-color: #ff4444; color: white; }
+  textarea { width: 80%; height: 150px; font-family: monospace; padding: 10px; }
+</style>
+</head>
+<body>
+
+  <h2>LEDコードジェネレーター (5x5)</h2>
+  
+  <div class="grid" id="ledGrid"></div>
+
+  <textarea id="outputCode" readonly></textarea>
+
+<script>
+  const gridSize = 25;
+  const gridElement = document.getElementById('ledGrid');
+  const outputElement = document.getElementById('outputCode');
+  let selectedLeds = new Set();
+
+  // 1. LEDボタンを25個生成する
+  for (let i = 0; i < gridSize; i++) {
+    const led = document.createElement('div');
+    led.className = 'led';
+    led.innerText = i; // 番号を表示
+    
+    // 2. クリックされたときの処理
+    led.addEventListener('click', () => {
+      led.classList.toggle('active');
+      if (selectedLeds.has(i)) {
+        selectedLeds.delete(i);
+      } else {
+        selectedLeds.add(i);
+      }
+      generateCode();
+    });
+    gridElement.appendChild(led);
+  }
+
+  // 3. コードを生成してテキストエリアに出力する関数
+  function generateCode() {
+    // 選択された番号を小さい順に並び替え
+    const sorted = Array.from(selectedLeds).sort((a, b) => a - b);
+    let code = "// FastLED用 生成コード\n";
+    sorted.forEach(index => {
+      code += `leds[${index}] = CRGB::Red;\n`;
+    });
+    outputElement.value = code;
+  }
+</script>
+
+</body>
+</html>
